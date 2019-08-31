@@ -400,6 +400,9 @@ func (c *Conn) readResponses() {
 		buf := make([]byte, 32)
 		err, seq = nil, 0
 		if _, err := io.ReadFull(c.conn, buf); err != nil {
+			if err == io.EOF {
+				return
+			}
 			Logger.Printf("A read error is unrecoverable: %s", err)
 			c.eventChan <- err
 			c.Close()
@@ -522,6 +525,8 @@ func processEventOrError(everr eventOrError) (Event, Error) {
 		return ee, nil
 	case Error:
 		return nil, ee
+	case nil:
+		return nil, nil
 	default:
 		Logger.Printf("Invalid event/error type: %T", everr)
 		return nil, nil
