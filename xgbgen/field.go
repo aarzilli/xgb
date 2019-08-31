@@ -321,7 +321,6 @@ func (f *ValueField) Initialize(p *Protocol) {
 type SwitchField struct {
 	xmlName  string
 	Name     string
-	MaskName string
 	Expr     Expression
 	Bitcases []*Bitcase
 }
@@ -351,9 +350,7 @@ func (f *SwitchField) Size() Size {
 			Expr2: &PopCount{
 				Expr: &Function{
 					Name: "int",
-					Expr: &FieldRef{
-						Name: f.MaskName,
-					},
+					Expr: f.Expr,
 				},
 			},
 		},
@@ -366,9 +363,7 @@ func (f *SwitchField) ListLength() Size {
 	return newExpressionSize(&PopCount{
 		Expr: &Function{
 			Name: "int",
-			Expr: &FieldRef{
-				Name: f.MaskName,
-			},
+			Expr: f.Expr,
 		},
 	}, true)
 }
@@ -377,11 +372,6 @@ func (f *SwitchField) Initialize(p *Protocol) {
 	f.xmlName = f.Name
 	f.Name = SrcName(p, f.Name)
 	f.Expr.Initialize(p)
-	fieldref, ok := f.Expr.(*FieldRef)
-	if !ok {
-		panic("switch field's expression not a fieldref")
-	}
-	f.MaskName = SrcName(p, fieldref.Name)
 	for _, bitcase := range f.Bitcases {
 		bitcase.Expr.Initialize(p)
 		for _, field := range bitcase.Fields {

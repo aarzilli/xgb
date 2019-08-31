@@ -14,7 +14,7 @@ ifndef XPROTO
 XPROTO=/usr/share/xcb
 endif
 
-# All of the XML files in my /usr/share/xcb directory EXCEPT XKB. -_-
+# All of the XML files in my /usr/share/xcb directory.
 # This is intended to build xgbgen and generate Go code for each supported
 # extension.
 all: build-xgbgen \
@@ -23,7 +23,7 @@ all: build-xgbgen \
 		 screensaver.xml shape.xml shm.xml xc_misc.xml \
 		 xevie.xml xf86dri.xml xf86vidmode.xml xfixes.xml xinerama.xml \
 		 xprint.xml xproto.xml xselinux.xml xtest.xml \
-		 xvmc.xml xv.xml
+		 xvmc.xml xv.xml xkb.xml
 
 build-xgbgen:
 	(cd xgbgen && go build)
@@ -32,7 +32,7 @@ build-xgbgen:
 build-all: bigreq.b composite.b damage.b dpms.b dri2.b ge.b glx.b randr.b \
 					 record.b render.b res.b screensaver.b shape.b shm.b xcmisc.b \
 					 xevie.b xf86dri.b xf86vidmode.b xfixes.b xinerama.b \
-					 xprint.b xproto.b xselinux.b xtest.b xv.b xvmc.b
+					 xprint.b xproto.b xselinux.b xtest.b xv.b xvmc.b xkb.b
 
 %.b:
 	(cd $* ; go build)
@@ -41,7 +41,7 @@ build-all: bigreq.b composite.b damage.b dpms.b dri2.b ge.b glx.b randr.b \
 install: bigreq.i composite.i damage.i dpms.i dri2.i ge.i glx.i randr.i \
 					 record.i render.i res.i screensaver.i shape.i shm.i xcmisc.i \
 					 xevie.i xf86dri.i xf86vidmode.i xfixes.i xinerama.i \
-					 xprint.i xproto.i xselinux.i xtest.i xv.i xvmc.i
+					 xprint.i xproto.i xselinux.i xtest.i xv.i xvmc.i xkb.i
 	go install
 
 %.i:

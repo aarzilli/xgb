@@ -191,7 +191,12 @@ func (e *UnaryOp) Reduce(prefix string) string {
 	if e.Concrete() {
 		return fmt.Sprintf("%d", e.Eval())
 	}
-	return fmt.Sprintf("(%s (%s))", e.Op, e.Expr.Reduce(prefix))
+	op := e.Op
+	switch op {
+	case "~":
+		op = "^"
+	}
+	return fmt.Sprintf("(%s (%s))", op, e.Expr.Reduce(prefix))
 }
 
 func (e *UnaryOp) String() string {
