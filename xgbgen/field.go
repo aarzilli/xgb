@@ -35,12 +35,12 @@ type Field interface {
 	// Read writes the Go code to convert a byte slice to a Go value
 	// of this field.
 	// 'prefix' is the prefix of the name of the Go value.
-	Read(c *Context, prefix string)
+	Read(c *Context, prefix Prefix)
 
 	// Write writes the Go code to convert a Go value to a byte slice of
 	// this field.
 	// 'prefix' is the prefix of the name of the Go value.
-	Write(c *Context, prefix string)
+	Write(c *Context, prefix Prefix)
 }
 
 func (pad *PadField) Initialize(p *Protocol) {}
@@ -96,8 +96,8 @@ func (f *RequiredStartAlign) Size() Size {
 
 func (f *RequiredStartAlign) Define(c *Context) {}
 
-func (f *RequiredStartAlign) Read(c *Context, prefix string)  {}
-func (f *RequiredStartAlign) Write(c *Context, prefix string) {}
+func (f *RequiredStartAlign) Read(c *Context, prefix Prefix)  {}
+func (f *RequiredStartAlign) Write(c *Context, prefix Prefix) {}
 
 // SingleField represents most of the fields in an XML protocol description.
 // It corresponds to any single value.
@@ -285,11 +285,8 @@ func (f *ValueField) Size() Size {
 			Op:    "*",
 			Expr1: &Value{v: 4},
 			Expr2: &PopCount{
-				Expr: &Function{
-					Name: "int",
-					Expr: &FieldRef{
-						Name: f.MaskName,
-					},
+				Expr: &FieldRef{
+					Name: f.MaskName,
 				},
 			},
 		},
@@ -299,11 +296,8 @@ func (f *ValueField) Size() Size {
 
 func (f *ValueField) ListLength() Size {
 	return newExpressionSize(&PopCount{
-		Expr: &Function{
-			Name: "int",
-			Expr: &FieldRef{
-				Name: f.MaskName,
-			},
+		Expr: &FieldRef{
+			Name: f.MaskName,
 		},
 	}, true)
 }
@@ -348,10 +342,7 @@ func (f *SwitchField) Size() Size {
 			Op:    "*",
 			Expr1: &Value{v: 4},
 			Expr2: &PopCount{
-				Expr: &Function{
-					Name: "int",
-					Expr: f.Expr,
-				},
+				Expr: f.Expr,
 			},
 		},
 	}, true)
@@ -361,10 +352,7 @@ func (f *SwitchField) Size() Size {
 
 func (f *SwitchField) ListLength() Size {
 	return newExpressionSize(&PopCount{
-		Expr: &Function{
-			Name: "int",
-			Expr: f.Expr,
-		},
+		Expr: f.Expr,
 	}, true)
 }
 

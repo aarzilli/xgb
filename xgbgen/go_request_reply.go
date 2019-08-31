@@ -123,7 +123,7 @@ func (r *Request) ReadReply(c *Context) {
 	c.Putln("b := 1 // skip reply determinant")
 	c.Putln("")
 	for i, field := range r.Reply.Fields {
-		field.Read(c, "v.")
+		field.Read(c, Prefix{ "v.", r.Reply.Fields })
 		c.Putln("")
 		if i == 0 {
 			c.Putln("v.Sequence = xgb.Get16(buf[b:])")
@@ -189,7 +189,7 @@ func (r *Request) WriteRequest(c *Context) {
 		writeSize1()
 	}
 	for i, field := range r.Fields {
-		field.Write(c, "")
+		field.Write(c, Prefix{ "", r.Fields })
 		c.Putln("")
 		if i == 0 && !c.protocol.isExt() {
 			writeSize1()

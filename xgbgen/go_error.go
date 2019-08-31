@@ -51,7 +51,7 @@ func (e *Error) Read(c *Context) {
 	c.Putln("b += 2")
 	c.Putln("")
 	for _, field := range e.Fields {
-		field.Read(c, "v.")
+		field.Read(c, Prefix{ "v.", e.Fields })
 		c.Putln("")
 	}
 	c.Putln("return v")

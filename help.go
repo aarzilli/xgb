@@ -103,3 +103,10 @@ func Get64(buf []byte) uint64 {
 	v |= uint64(buf[7]) << 56
 	return v
 }
+
+func Bool2int(x bool) int {
+	if x {
+		return 1
+	}
+	return 0
+}

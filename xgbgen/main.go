@@ -54,6 +54,7 @@ func main() {
 	} else {
 		buf, err := format.Source(c.out.Bytes())
 		if err != nil {
+			os.Stdout.Write(c.out.Bytes())
 			log.Fatal(err)
 		}
 		os.Stdout.Write(buf)

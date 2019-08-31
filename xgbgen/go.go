@@ -110,7 +110,7 @@ func (f *PadField) Define(c *Context) {
 	}
 }
 
-func (f *PadField) Read(c *Context, prefix string) {
+func (f *PadField) Read(c *Context, prefix Prefix) {
 	if f.Align > 0 {
 		c.Putln("b = (b + %d) & ^%d // alignment gap", f.Align-1, f.Align-1)
 	} else {
@@ -118,7 +118,7 @@ func (f *PadField) Read(c *Context, prefix string) {
 	}
 }
 
-func (f *PadField) Write(c *Context, prefix string) {
+func (f *PadField) Write(c *Context, prefix Prefix) {
 	if f.Align > 0 {
 		c.Putln("b = (b + %d) & ^%d // alignment gap", f.Align-1, f.Align-1)
 	} else {
@@ -132,13 +132,13 @@ func (f *LocalField) Define(c *Context) {
 	panic("unreachable")
 }
 
-func (f *LocalField) Read(c *Context, prefix string) {
+func (f *LocalField) Read(c *Context, prefix Prefix) {
 	c.Putln("// reading local field: %s (%s) :: %s",
 		f.SrcName(), f.Size(), f.Type.SrcName())
 	panic("unreachable")
 }
 
-func (f *LocalField) Write(c *Context, prefix string) {
+func (f *LocalField) Write(c *Context, prefix Prefix) {
 	c.Putln("// skip writing local field: %s (%s) :: %s",
 		f.SrcName(), f.Size(), f.Type.SrcName())
 }
@@ -150,13 +150,13 @@ func (f *ExprField) Define(c *Context) {
 	panic("unreachable")
 }
 
-func (f *ExprField) Read(c *Context, prefix string) {
+func (f *ExprField) Read(c *Context, prefix Prefix) {
 	c.Putln("// reading expression field: %s (%s) (%s) :: %s",
 		f.SrcName(), f.Size(), f.Expr, f.Type.SrcName())
 	panic("unreachable")
 }
 
-func (f *ExprField) Write(c *Context, prefix string) {
+func (f *ExprField) Write(c *Context, prefix Prefix) {
 	// Special case for bools, grrr.
 	if f.Type.SrcName() == "bool" {
 		c.Putln("buf[b] = byte(%s)", f.Expr.Reduce(prefix))
@@ -172,7 +172,7 @@ func (f *ValueField) Define(c *Context) {
 	c.Putln("%s []uint32", f.ListName)
 }
 
-func (f *ValueField) Read(c *Context, prefix string) {
+func (f *ValueField) Read(c *Context, prefix Prefix) {
 	ReadSimpleSingleField(c,
 		fmt.Sprintf("%s%s", prefix, f.MaskName), f.MaskType)
 	c.Putln("")
@@ -185,7 +185,7 @@ func (f *ValueField) Read(c *Context, prefix string) {
 	c.Putln("b = xgb.Pad(b)")
 }
 
-func (f *ValueField) Write(c *Context, prefix string) {
+func (f *ValueField) Write(c *Context, prefix Prefix) {
 	WriteSimpleSingleField(c,
 		fmt.Sprintf("%s%s", prefix, f.MaskName), f.MaskType)
 	c.Putln("for i := 0; i < %s; i++ {", f.ListLength().Reduce(prefix))
@@ -200,7 +200,7 @@ func (f *SwitchField) Define(c *Context) {
 	c.Putln("%s []uint32", f.Name)
 }
 
-func (f *SwitchField) Read(c *Context, prefix string) {
+func (f *SwitchField) Read(c *Context, prefix Prefix) {
 	c.Putln("")
 	c.Putln("%s%s = make([]uint32, %s)",
 		prefix, f.Name, f.ListLength().Reduce(prefix))
@@ -211,7 +211,7 @@ func (f *SwitchField) Read(c *Context, prefix string) {
 	c.Putln("b = xgb.Pad(b)")
 }
 
-func (f *SwitchField) Write(c *Context, prefix string) {
+func (f *SwitchField) Write(c *Context, prefix Prefix) {
 	c.Putln("for i := 0; i < %s; i++ {", f.ListLength().Reduce(prefix))
 	c.Putln("xgb.Put32(buf[b:], %s%s[i])", prefix, f.Name)
 	c.Putln("b += 4")

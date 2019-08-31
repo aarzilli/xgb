@@ -20,10 +20,6 @@ func (u *Union) Define(c *Context) {
 	c.Putln("}")
 	c.Putln("")
 
-	// Write functions for each field that create instances of this
-	// union using the corresponding field.
-	u.New(c)
-
 	// Write function that reads bytes and produces this union.
 	u.Read(c)
 
@@ -37,34 +33,6 @@ func (u *Union) Define(c *Context) {
 	u.WriteList(c)
 }
 
-func (u *Union) New(c *Context) {
-	for _, field := range u.Fields {
-		c.Putln("// %s%sNew constructs a new %s union type with the %s field.",
-			u.SrcName(), field.SrcName(), u.SrcName(), field.SrcName())
-		c.Putln("func %s%sNew(%s %s) %s {",
-			u.SrcName(), field.SrcName(), field.SrcName(),
-			field.SrcType(), u.SrcName())
-		c.Putln("var b int")
-		c.Putln("buf := make([]byte, %s)", u.Size())
-		c.Putln("")
-		field.Write(c, "")
-		c.Putln("")
-		c.Putln("// Create the Union type")
-		c.Putln("v := %s{}", u.SrcName())
-		c.Putln("")
-		c.Putln("// Now copy buf into all fields")
-		c.Putln("")
-		for _, field2 := range u.Fields {
-			c.Putln("b = 0 // always read the same bytes")
-			field2.Read(c, "v.")
-			c.Putln("")
-		}
-		c.Putln("return v")
-		c.Putln("}")
-		c.Putln("")
-	}
-}
-
 func (u *Union) Read(c *Context) {
 	c.Putln("// %sRead reads a byte slice into a %s value.",
 		u.SrcName(), u.SrcName())
@@ -73,7 +41,7 @@ func (u *Union) Read(c *Context) {
 	c.Putln("")
 	for _, field := range u.Fields {
 		c.Putln("b = 0 // re-read the same bytes")
-		field.Read(c, "v.")
+		field.Read(c, Prefix{ "v.", u.Fields })
 		c.Putln("")
 	}
 	c.Putln("return %s", u.Size())
@@ -106,10 +74,10 @@ func (u *Union) Write(c *Context) {
 	c.Putln("// Each field in a union must contain the same data.")
 	c.Putln("// So simply pick the first field and write that to the wire.")
 	c.Putln("func (v %s) Bytes() []byte {", u.SrcName())
-	c.Putln("buf := make([]byte, %s)", u.Size().Reduce("v."))
+	c.Putln("buf := make([]byte, %s)", u.Size().Reduce(Prefix{ "v.", u.Fields }))
 	c.Putln("b := 0")
 	c.Putln("")
-	u.Fields[0].Write(c, "v.")
+	u.Fields[0].Write(c, Prefix{ "v.", u.Fields })
 	c.Putln("return buf")
 	c.Putln("}")
 	c.Putln("")
@@ -139,7 +107,7 @@ func (u *Union) WriteListSize(c *Context) {
 	c.Putln("func %sListSize(list []%s) int {", u.SrcName(), u.SrcName())
 	c.Putln("size := 0")
 	c.Putln("for _, item := range list {")
-	c.Putln("size += %s", u.Size().Reduce("item."))
+	c.Putln("size += %s", u.Size().Reduce(Prefix{ "item.", u.Fields }))
 	c.Putln("}")
 	c.Putln("return size")
 	c.Putln("}")

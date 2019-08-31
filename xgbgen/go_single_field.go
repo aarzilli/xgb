@@ -9,6 +9,16 @@ func (f *SingleField) Define(c *Context) {
 	c.Putln("%s %s", f.SrcName(), f.Type.SrcName())
 }
 
+func resolveTypeDef(t Type) Type {
+	for {
+		td, istd := t.(*TypeDef)
+		if !istd {
+			return t
+		}
+		t = td.Old
+	}
+}
+
 func ReadSimpleSingleField(c *Context, name string, typ Type) {
 	switch t := typ.(type) {
 	case *Resource:
@@ -61,12 +71,21 @@ func ReadSimpleSingleField(c *Context, name string, typ Type) {
 	c.Putln("b += %s", typ.Size())
 }
 
-func (f *SingleField) Read(c *Context, prefix string) {
+func (f *SingleField) Read(c *Context, prefix Prefix) {
 	switch t := f.Type.(type) {
 	case *Resource:
 		ReadSimpleSingleField(c, fmt.Sprintf("%s%s", prefix, f.SrcName()), t)
 	case *TypeDef:
-		ReadSimpleSingleField(c, fmt.Sprintf("%s%s", prefix, f.SrcName()), t)
+		tt := resolveTypeDef(f.Type)
+		switch t2 := tt.(type) {
+		case *Base:
+			ReadSimpleSingleField(c, fmt.Sprintf("%s%s", prefix, f.SrcName()), t)
+		case *Struct:
+			c.Putln("{ var x %s", t2.SrcName())
+			c.Putln("%sRead(buf[b:], &x)", t2.SrcName())
+			c.Putln("%s%s = %s(x)", prefix, f.SrcName(), t.SrcName())
+			c.Putln("}")
+		}
 	case *Base:
 		ReadSimpleSingleField(c, fmt.Sprintf("%s%s", prefix, f.SrcName()), t)
 	case *Struct:
@@ -140,12 +159,18 @@ func WriteSimpleSingleField(c *Context, name string, typ Type) {
 	c.Putln("b += %s", typ.Size())
 }
 
-func (f *SingleField) Write(c *Context, prefix string) {
+func (f *SingleField) Write(c *Context, prefix Prefix) {
 	switch t := f.Type.(type) {
 	case *Resource:
 		WriteSimpleSingleField(c, fmt.Sprintf("%s%s", prefix, f.SrcName()), t)
 	case *TypeDef:
-		WriteSimpleSingleField(c, fmt.Sprintf("%s%s", prefix, f.SrcName()), t)
+		tt := resolveTypeDef(f.Type)
+		switch tt.(type) {
+		case *Base:
+			WriteSimpleSingleField(c, fmt.Sprintf("%s%s", prefix, f.SrcName()), t)
+		default:
+			log.Fatalf("Cannot write field '%s' with %T type.", f.XmlName(), f.Type)
+		}
 	case *Base:
 		WriteSimpleSingleField(c, fmt.Sprintf("%s%s", prefix, f.SrcName()), t)
 	case *Union:
@@ -161,6 +186,6 @@ func (f *SingleField) Write(c *Context, prefix string) {
 		c.Putln("b += len(structBytes)")
 		c.Putln("}")
 	default:
-		log.Fatalf("Cannot read field '%s' with %T type.", f.XmlName(), f.Type)
+		log.Fatalf("Cannot write field '%s' with %T type.", f.XmlName(), f.Type)
 	}
 }

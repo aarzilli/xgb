@@ -72,7 +72,7 @@ func (e *Event) Read(c *Context) {
 			c.Putln("b += 2")
 			c.Putln("")
 		}
-		field.Read(c, "v.")
+		field.Read(c, Prefix{ "v.", e.Fields })
 		c.Putln("")
 	}
 	c.Putln("return v")
@@ -95,7 +95,7 @@ func (e *Event) Write(c *Context) {
 			c.Putln("b += 2 // skip sequence number")
 			c.Putln("")
 		}
-		field.Write(c, "v.")
+		field.Write(c, Prefix{ "v.", e.Fields })
 		c.Putln("")
 	}
 	c.Putln("return buf")

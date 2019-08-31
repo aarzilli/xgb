@@ -5,6 +5,15 @@ import (
 	"log"
 )
 
+type Prefix struct {
+	prefix string
+	contType []Field
+}
+
+func (prefix Prefix) String() string {
+	return prefix.prefix
+}
+
 // Expression represents all the different forms of expressions possible in
 // side an XML protocol description file. It's also received a few custom
 // addendums to make applying special functions (like padding) easier.
@@ -24,7 +33,7 @@ type Expression interface {
 	// i.e., (1 + 2 * (5 + 1 + someSizeOfStruct) reduces to
 	// (3 * (6 + someSizeOfStruct)).
 	// 'prefix' is used preprended to any field reference name.
-	Reduce(prefix string) string
+	Reduce(prefix Prefix) string
 
 	// String is an alias for Reduce("")
 	String() string
@@ -53,12 +62,12 @@ func (e *Function) Eval() int {
 	panic("unreachable")
 }
 
-func (e *Function) Reduce(prefix string) string {
+func (e *Function) Reduce(prefix Prefix) string {
 	return fmt.Sprintf("%s(%s)", e.Name, e.Expr.Reduce(prefix))
 }
 
 func (e *Function) String() string {
-	return e.Reduce("")
+	return e.Reduce(Prefix{})
 }
 
 func (e *Function) Initialize(p *Protocol) {
@@ -124,34 +133,50 @@ func (e *BinaryOp) Eval() int {
 	panic("unreachable")
 }
 
-func (e *BinaryOp) Reduce(prefix string) string {
+func (e *BinaryOp) Reduce(prefix Prefix) string {
 	if e.Concrete() {
 		return fmt.Sprintf("%d", e.Eval())
 	}
 
-	// An incredibly dirty hack to make sure any time we perform an operation
-	// on a field, we're dealing with ints...
-	expr1, expr2 := e.Expr1, e.Expr2
-	switch expr1.(type) {
-	case *FieldRef:
-		expr1 = &Function{
-			Name: "int",
-			Expr: expr1,
-		}
-	}
-	switch expr2.(type) {
-	case *FieldRef:
-		expr2 = &Function{
-			Name: "int",
-			Expr: expr2,
-		}
-	}
+	expr1, expr2 := exprToInt(e.Expr1, prefix), exprToInt(e.Expr2, prefix)
 	return fmt.Sprintf("(%s %s %s)",
 		expr1.Reduce(prefix), e.Op, expr2.Reduce(prefix))
 }
 
+func exprToInt(expr Expression, prefix Prefix) Expression {
+	// An incredibly dirty hack to make sure any time we perform an operation
+	// on a field, we're dealing with ints...
+	switch e := expr.(type) {
+	case *FieldRef:
+		t := resolveTypeDef(typeOfField(prefix.contType, e.Name))
+		if t != nil && t.SrcName() == "bool" {
+			expr = &Function{
+				Name: "xgb.Bool2int",
+				Expr: expr,
+			}
+		} else {
+			expr = &Function{
+				Name: "int",
+				Expr: expr,
+			}
+		}
+	}
+	return expr
+}
+
+func typeOfField(fields []Field, name string) Type {
+	for _, field := range fields {
+		if field, issingle := field.(*SingleField); issingle {
+			if field.srcName == name {
+				return field.Type
+			}
+		}
+	}
+	return nil
+}
+
 func (e *BinaryOp) String() string {
-	return e.Reduce("")
+	return e.Reduce(Prefix{})
 }
 
 func (e *BinaryOp) Initialize(p *Protocol) {
@@ -187,20 +212,18 @@ func (e *UnaryOp) Eval() int {
 	panic("unreachable")
 }
 
-func (e *UnaryOp) Reduce(prefix string) string {
+func (e *UnaryOp) Reduce(prefix Prefix) string {
 	if e.Concrete() {
 		return fmt.Sprintf("%d", e.Eval())
 	}
-	op := e.Op
-	switch op {
-	case "~":
-		op = "^"
+	if e.Op == "~" {
+		return fmt.Sprintf("(^(int(%s)))", e.Expr.Reduce(prefix))
 	}
-	return fmt.Sprintf("(%s (%s))", op, e.Expr.Reduce(prefix))
+	return fmt.Sprintf("(%s (%s))", e.Op, e.Expr.Reduce(prefix))
 }
 
 func (e *UnaryOp) String() string {
-	return e.Reduce("")
+	return e.Reduce(Prefix{})
 }
 
 func (e *UnaryOp) Initialize(p *Protocol) {
@@ -227,7 +250,7 @@ func (e *Padding) Eval() int {
 	return pad(e.Expr.Eval())
 }
 
-func (e *Padding) Reduce(prefix string) string {
+func (e *Padding) Reduce(prefix Prefix) string {
 	if e.Concrete() {
 		return fmt.Sprintf("%d", e.Eval())
 	}
@@ -235,7 +258,7 @@ func (e *Padding) Reduce(prefix string) string {
 }
 
 func (e *Padding) String() string {
-	return e.Reduce("")
+	return e.Reduce(Prefix{})
 }
 
 func (e *Padding) Initialize(p *Protocol) {
@@ -262,15 +285,15 @@ func (e *PopCount) Eval() int {
 	return int(popCount(uint(e.Expr.Eval())))
 }
 
-func (e *PopCount) Reduce(prefix string) string {
+func (e *PopCount) Reduce(prefix Prefix) string {
 	if e.Concrete() {
 		return fmt.Sprintf("%d", e.Eval())
 	}
-	return fmt.Sprintf("xgb.PopCount(%s)", e.Expr.Reduce(prefix))
+	return fmt.Sprintf("xgb.PopCount(int(%s))", e.Expr.Reduce(prefix))
 }
 
 func (e *PopCount) String() string {
-	return e.Reduce("")
+	return e.Reduce(Prefix{})
 }
 
 func (e *PopCount) Initialize(p *Protocol) {
@@ -296,12 +319,12 @@ func (e *Value) Eval() int {
 	return e.v
 }
 
-func (e *Value) Reduce(prefix string) string {
+func (e *Value) Reduce(prefix Prefix) string {
 	return fmt.Sprintf("%d", e.v)
 }
 
 func (e *Value) String() string {
-	return e.Reduce("")
+	return e.Reduce(Prefix{})
 }
 
 func (e *Value) Initialize(p *Protocol) {}
@@ -323,12 +346,12 @@ func (e *Bit) Eval() int {
 	return int(1 << uint(e.b))
 }
 
-func (e *Bit) Reduce(prefix string) string {
+func (e *Bit) Reduce(prefix Prefix) string {
 	return fmt.Sprintf("%d", e.Eval())
 }
 
 func (e *Bit) String() string {
-	return e.Reduce("")
+	return e.Reduce(Prefix{})
 }
 
 func (e *Bit) Initialize(p *Protocol) {}
@@ -352,16 +375,16 @@ func (e *FieldRef) Eval() int {
 	panic("unreachable")
 }
 
-func (e *FieldRef) Reduce(prefix string) string {
+func (e *FieldRef) Reduce(prefix Prefix) string {
 	val := e.Name
-	if len(prefix) > 0 {
+	if len(prefix.prefix) > 0 {
 		val = fmt.Sprintf("%s%s", prefix, val)
 	}
 	return val
 }
 
 func (e *FieldRef) String() string {
-	return e.Reduce("")
+	return e.Reduce(Prefix{})
 }
 
 func (e *FieldRef) Initialize(p *Protocol) {
@@ -389,12 +412,12 @@ func (e *EnumRef) Eval() int {
 	panic("unreachable")
 }
 
-func (e *EnumRef) Reduce(prefix string) string {
+func (e *EnumRef) Reduce(prefix Prefix) string {
 	return fmt.Sprintf("%s%s", e.EnumKind, e.EnumItem)
 }
 
 func (e *EnumRef) String() string {
-	return e.Reduce("")
+	return e.Reduce(Prefix{})
 }
 
 func (e *EnumRef) Initialize(p *Protocol) {
@@ -421,15 +444,15 @@ func (e *SumOf) Eval() int {
 	panic("unreachable")
 }
 
-func (e *SumOf) Reduce(prefix string) string {
-	if len(prefix) > 0 {
+func (e *SumOf) Reduce(prefix Prefix) string {
+	if len(prefix.prefix) > 0 {
 		return fmt.Sprintf("sum(%s%s)", prefix, e.Name)
 	}
 	return fmt.Sprintf("sum(%s)", e.Name)
 }
 
 func (e *SumOf) String() string {
-	return e.Reduce("")
+	return e.Reduce(Prefix{})
 }
 
 func (e *SumOf) Initialize(p *Protocol) {

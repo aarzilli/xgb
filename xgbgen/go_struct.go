@@ -39,7 +39,7 @@ func (s *Struct) Read(c *Context) {
 	c.Putln("b := 0")
 	c.Putln("")
 	for _, field := range s.Fields {
-		field.Read(c, "v.")
+		field.Read(c, Prefix{ "v.", s.Fields })
 		c.Putln("")
 	}
 	c.Putln("return b")
@@ -71,11 +71,11 @@ func (s *Struct) ReadList(c *Context) {
 func (s *Struct) Write(c *Context) {
 	c.Putln("// Bytes writes a %s value to a byte slice.", s.SrcName())
 	c.Putln("func (v %s) Bytes() []byte {", s.SrcName())
-	c.Putln("buf := make([]byte, %s)", s.Size().Reduce("v."))
+	c.Putln("buf := make([]byte, %s)", s.Size().Reduce(Prefix{ "v.", s.Fields }))
 	c.Putln("b := 0")
 	c.Putln("")
 	for _, field := range s.Fields {
-		field.Write(c, "v.")
+		field.Write(c, Prefix{ "v.", s.Fields })
 		c.Putln("")
 	}
 	c.Putln("return buf[:b]")
@@ -110,7 +110,7 @@ func (s *Struct) WriteListSize(c *Context) {
 	} else {
 		c.Putln("for _, item := range list {")
 	}
-	c.Putln("size += %s", s.Size().Reduce("item."))
+	c.Putln("size += %s", s.Size().Reduce(Prefix{ "item.", s.Fields }))
 	c.Putln("}")
 	c.Putln("return size")
 	c.Putln("}")

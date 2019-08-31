@@ -12,7 +12,7 @@ func (f *ListField) Define(c *Context) {
 		f.SrcName(), f.SrcType(), f.Size())
 }
 
-func (f *ListField) Read(c *Context, prefix string) {
+func (f *ListField) Read(c *Context, prefix Prefix) {
 	switch t := f.Type.(type) {
 	case *Resource:
 		length := f.LengthExpr.Reduce(prefix)
@@ -69,7 +69,7 @@ func (f *ListField) Read(c *Context, prefix string) {
 	}
 }
 
-func (f *ListField) Write(c *Context, prefix string) {
+func (f *ListField) Write(c *Context, prefix Prefix) {
 	switch t := f.Type.(type) {
 	case *Resource:
 		length := f.Length().Reduce(prefix)
