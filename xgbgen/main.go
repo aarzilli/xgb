@@ -5,8 +5,8 @@ import (
 	"io/ioutil"
 	"log"
 	"os"
-	"os/exec"
 	"strings"
+	"go/format"
 )
 
 var (
@@ -52,13 +52,10 @@ func main() {
 	if !*gofmt {
 		c.out.WriteTo(os.Stdout)
 	} else {
-		cmdGofmt := exec.Command("gofmt")
-		cmdGofmt.Stdin = c.out
-		cmdGofmt.Stdout = os.Stdout
-		cmdGofmt.Stderr = os.Stderr
-		err = cmdGofmt.Run()
+		buf, err := format.Source(c.out.Bytes())
 		if err != nil {
 			log.Fatal(err)
 		}
+		os.Stdout.Write(buf)
 	}
 }
